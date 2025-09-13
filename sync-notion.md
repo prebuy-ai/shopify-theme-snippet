@@ -1,5 +1,10 @@
 # Notion Sync Instructions
 
+## Repository Information
+- **GitHub Repository**: https://github.com/prebuy-ai/shopify-theme-snippet
+- **Repository Name**: shopify-theme-snippet
+- **Organization**: prebuy-ai
+
 ## Notion Document Details
 - **URL**: https://www.notion.so/26dac44aaa5281bd9b1dc6c4665441f2
 - **Page ID**: 26dac44a-aa52-81bd-9b1d-c6c4665441f2

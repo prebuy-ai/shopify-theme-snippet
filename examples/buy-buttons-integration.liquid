@@ -1,0 +1,65 @@
+{% comment %}
+  Example: How to integrate Prebuy into your buy-buttons.liquid snippet
+  
+  This shows the typical integration pattern for product forms.
+  Add the prebuy-selling-plan render call after your variant ID input.
+{% endcomment %}
+
+<!-- Your existing product form structure -->
+<form action="{{ routes.cart_add_url }}" method="post" enctype="multipart/form-data">
+  <!-- Your existing form content -->
+  
+  <!-- Variant ID input (your existing code) -->
+  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+  
+  <!-- ADD THIS LINE: Prebuy selling plan integration -->
+  {% render 'prebuy-selling-plan', product: product %}
+  
+  <!-- Your existing quantity and other inputs -->
+  <div class="product-form__input product-form__quantity">
+    <label class="form__label" for="Quantity-{{ section.id }}">
+      {{ 'products.product.quantity.label' | t }}
+    </label>
+    <quantity-input class="quantity">
+      <button class="quantity__button no-js-hidden" name="minus" type="button">
+        <span class="visually-hidden">{{ 'products.product.quantity.decrease' | t: product: product.title | escape }}</span>
+        {% render 'icon-minus' %}
+      </button>
+      <input
+        class="quantity__input"
+        type="number"
+        name="quantity"
+        id="Quantity-{{ section.id }}"
+        min="1"
+        value="1"
+        form="{{ product_form_id }}"
+      >
+      <button class="quantity__button no-js-hidden" name="plus" type="button">
+        <span class="visually-hidden">{{ 'products.product.quantity.increase' | t: product: product.title | escape }}</span>
+        {% render 'icon-plus' %}
+      </button>
+    </quantity-input>
+  </div>
+  
+  <!-- Your existing buy button -->
+  <div class="product-form__buttons">
+    <button
+      type="submit"
+      name="add"
+      class="btn product-form__cart-submit"
+      {% if product.selected_or_first_available_variant.available == false %}disabled{% endif %}
+    >
+      <span>
+        {%- if product.selected_or_first_available_variant.available -%}
+          {{ 'products.product.add_to_cart' | t }}
+        {%- else -%}
+          {{ 'products.product.sold_out' | t }}
+        {%- endif -%}
+      </span>
+    </button>
+  </div>
+  
+  <!-- ADD THIS LINE: Prebuy product page text (optional) -->
+  {% render 'prebuy-selling-plan', product: product, show_text: true %}
+  
+</form>

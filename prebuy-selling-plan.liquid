@@ -7,6 +7,15 @@
   For product page text, add this after your buttons:
   {% render 'prebuy-selling-plan', product: product, show_text: true %}
   
+  To enable preorder button text (changes "Add to Cart" to "Preorder Now"):
+  {% render 'prebuy-selling-plan', product: product, show_button_text: true %}
+  
+  To hide accelerated checkout buttons for preorder variants:
+  {% render 'prebuy-selling-plan', product: product, hide_accelerated_checkout: true %}
+  
+  To get the preorder status as a variable, use:
+  {% render 'prebuy-selling-plan', product: product, return_preorder_status: true %}
+  
   This snippet automatically handles:
   - Multiple campaigns per variant (location-based metafield structure)
   - Shopify Markets compatibility with location matching
@@ -23,7 +32,11 @@
 {% endcomment %}
 
 {%- liquid
-  assign current_variant = product.selected_or_first_available_variant
+  if variant
+    assign current_variant = variant
+  else
+    assign current_variant = product.selected_or_first_available_variant
+  endif
   assign prebuy_campaigns = current_variant.metafields.prebuy.campaigns.value
   assign prebuy_markets = shop.metafields.prebuy.markets.value
   assign current_market_id = localization.market.id
@@ -83,9 +96,75 @@
       endif
     endfor
   endif
+  
+  # Output preorder status if requested
+  if return_preorder_status
+    echo is_market_compatible
+  endif
+  
+  # Handle button text updates if requested
+  if show_button_text
+    assign enable_button_text_updates = true
+  endif
+  
+  # Handle accelerated checkout hiding if requested
+  if hide_accelerated_checkout
+    assign enable_accelerated_checkout_control = true
+  endif
 -%}
 
-{%- unless show_text -%}
+{%- if enable_button_text_updates or enable_accelerated_checkout_control -%}
+<script>
+{%- if enable_button_text_updates -%}window.prebuyEnableButtonTextUpdates = true;{%- endif -%}
+{%- if enable_accelerated_checkout_control -%}window.prebuyEnableAcceleratedCheckoutControl = true;{%- endif -%}
+
+// Update button text on page load
+document.addEventListener('DOMContentLoaded', function() {
+  const buyButtons = document.querySelectorAll('.product-form__submit, button[name="add"], .pdp-info__add-to-cart');
+  const isPreorder = {{ is_market_compatible | json }};
+  
+  buyButtons.forEach(button => {
+    const buttonTextSpan = button.querySelector('span');
+    if (!buttonTextSpan || button.disabled) return;
+    
+    // Store original text
+    if (!button.dataset.originalText) {
+      const currentText = buttonTextSpan.textContent.trim();
+      if (!currentText.includes('Preorder') && !currentText.includes('Translation missing')) {
+        button.dataset.originalText = currentText;
+      } else {
+        button.dataset.originalText = 'Add to cart';
+      }
+    }
+    
+    // Update text based on preorder status
+    if (isPreorder) {
+      buttonTextSpan.textContent = 'Preorder Now';
+    }
+  });
+  
+  // Handle accelerated checkout visibility (only if enabled)
+  if (window.prebuyEnableAcceleratedCheckoutControl) {
+    const acceleratedCheckoutButtons = document.querySelectorAll('.shopify-payment-button, [data-shopify="payment-button"], .dynamic-checkout__content, .payment-button');
+    if (isPreorder) {
+      acceleratedCheckoutButtons.forEach(button => {
+        button.style.display = 'none';
+        button.setAttribute('data-prebuy-hidden', 'true');
+      });
+    } else {
+      acceleratedCheckoutButtons.forEach(button => {
+        if (button.getAttribute('data-prebuy-hidden') === 'true') {
+          button.style.display = '';
+          button.removeAttribute('data-prebuy-hidden');
+        }
+      });
+    }
+  }
+});
+</script>
+{%- endif -%}
+
+{%- unless show_text or return_preorder_status -%}
   <input
     type="hidden"
     name="selling_plan"
@@ -94,6 +173,7 @@
     data-prebuy-enabled="{{ is_market_compatible | default: false }}"
     data-market-id="{{ current_market_id }}"
     data-market-compatible="{{ is_market_compatible }}"
+    data-is-preorder="{{ is_market_compatible }}"
     {% unless is_market_compatible and selling_plan_id %}disabled{% endunless %}
   >
   
@@ -107,11 +187,12 @@
 {%- endunless -%}
 
 {%- if show_text -%}
-  <div class="prebuy-product-text" {% unless is_market_compatible and product_page_text %}style="display: none;"{% endunless %}>
+  <div class="prebuy-product-text" style="margin-top: 10px;{% unless is_market_compatible and product_page_text %} display: none;{% endunless %}">
     <p class="prebuy-text">{{ product_page_text }}</p>
   </div>
 {%- endif -%}
 
+{%- unless return_preorder_status -%}
 {%- comment -%} Variant data for JavaScript (Markets-aware with campaigns array) {%- endcomment -%}
 <script type="application/json" class="prebuy-variant-data">
 {
@@ -263,6 +344,7 @@
       const sellingPlanInputs = document.querySelectorAll('.prebuy-selling-plan');
       const locationPropertyInputs = document.querySelectorAll('.prebuy-location-property');
       const productTextElements = document.querySelectorAll('.prebuy-product-text');
+      const buyButtons = document.querySelectorAll('.product-form__submit, button[name="add"], .pdp-info__add-to-cart');
       const variantData = this.variantData[variantId];
       
       // Log variant change for debugging
@@ -316,6 +398,65 @@
           element.style.display = 'none';
         }
       });
+      
+      // Update buy button text (only if enabled)
+      if (window.prebuyEnableButtonTextUpdates) {
+        buyButtons.forEach(button => {
+        const buttonTextSpan = button.querySelector('span');
+        if (!buttonTextSpan) return;
+        
+        // Store original text if not already stored (but ignore preorder text)
+        if (!button.dataset.originalText) {
+          const currentText = buttonTextSpan.textContent.trim();
+          // Don't store preorder text or translation missing as "original"
+          if (!currentText.includes('Preorder') && !currentText.includes('Translation missing')) {
+            button.dataset.originalText = currentText;
+          } else {
+            // Default to standard add to cart text if we can't get a clean original
+            button.dataset.originalText = 'Add to cart';
+          }
+        }
+        
+        // Only update if this is an available variant (not sold out/unavailable)
+        // Also check if the button text is already showing sold out/unavailable states
+        const currentText = buttonTextSpan.textContent.trim().toLowerCase();
+        const isSoldOutOrUnavailable = currentText.includes('sold') || 
+                                       currentText.includes('unavailable') || 
+                                       currentText.includes('out of stock');
+        
+        if (!button.disabled && !isSoldOutOrUnavailable) {
+          if (variantData && variantData.enabled && variantData.marketCompatible) {
+            // This is a preorder variant
+            buttonTextSpan.textContent = 'Preorder Now';
+          } else {
+            // Regular variant - restore original text
+            buttonTextSpan.textContent = button.dataset.originalText;
+          }
+        }
+        // Don't update text for disabled buttons or buttons showing sold out states
+        });
+        
+        // Handle accelerated checkout visibility for variant changes (only if enabled)
+        if (window.prebuyEnableAcceleratedCheckoutControl) {
+          const acceleratedCheckoutButtons = document.querySelectorAll('.shopify-payment-button, [data-shopify="payment-button"], .dynamic-checkout__content, .payment-button');
+          if (variantData && variantData.enabled && variantData.marketCompatible) {
+            // Hide accelerated checkout for preorder variants
+            acceleratedCheckoutButtons.forEach(button => {
+              button.style.display = 'none';
+              button.setAttribute('data-prebuy-hidden', 'true');
+            });
+          } else {
+            // Show accelerated checkout for regular variants
+            acceleratedCheckoutButtons.forEach(button => {
+              if (button.getAttribute('data-prebuy-hidden') === 'true') {
+                button.style.display = '';
+                button.removeAttribute('data-prebuy-hidden');
+              }
+            });
+          }
+        }
+        
+      }
     }
   }
   
@@ -348,3 +489,4 @@
   }
 })();
 </script>
+{%- endunless -%}

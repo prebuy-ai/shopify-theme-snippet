@@ -7,7 +7,11 @@
    ```liquid
    {% render 'prebuy-selling-plan', product: product %}
    ```
-3. **Test**: Check browser console for 🌍 debug messages
+3. **Optional: Enable preorder button text**:
+   ```liquid
+   {% render 'prebuy-selling-plan', product: product, show_button_text: true %}
+   ```
+4. **Test**: Check browser console for 🌍 debug messages
 
 ## 📝 Common Integration Points
 
@@ -34,6 +38,15 @@
 {% render 'prebuy-selling-plan', product: product, show_text: true %}
 ```
 
+### Preorder Button Text (Optional)
+```liquid
+<!-- Enable automatic "Add to Cart" → "Preorder Now" text changes -->
+{% render 'prebuy-selling-plan', product: product, show_button_text: true %}
+
+<button type="submit">Add to Cart</button>
+<!-- Automatically becomes "Preorder Now" for preorder variants -->
+```
+
 ## 🔍 Verification Steps
 
 1. **Console Check**: Look for 🌍 and 🔄 emoji messages
@@ -54,8 +67,13 @@
 
 **Form Elements Added:**
 ```html
-<input type="hidden" name="selling_plan" value="123456789" class="prebuy-selling-plan">
+<input type="hidden" name="selling_plan" value="123456789" class="prebuy-selling-plan" data-buy-button-text="Pre-order Now">
 <input type="hidden" name="properties[_Location ID]" value="location123" class="prebuy-location-property">
+```
+
+**Button Attributes Added:**
+```html
+<button type="submit" data-original-text="Add to Cart" data-prebuy-button-active="true">Pre-order Now</button>
 ```
 
 **Console Messages:**

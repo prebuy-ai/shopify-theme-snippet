@@ -1,0 +1,99 @@
+{% comment %}
+  Example: Buy Button Text Integration for Preorder Mode
+  
+  This example demonstrates how Prebuy automatically changes buy button text
+  when a variant is in preorder mode. The integration is completely automatic -
+  no additional code needed beyond the standard Prebuy integration.
+  
+  How it works:
+  1. When a variant has buyButtonText configured in its campaign metafield,
+     the button text automatically changes to the custom text
+  2. Original button text is preserved and restored when switching variants
+  3. Works with both <button> and <input type="submit"> elements
+  4. Supports nested button text (e.g., <button><span>Text</span></button>)
+  
+  Campaign metafield structure:
+  {
+    "locationId": "location_123",
+    "sellingPlanId": "gid://shopify/SellingPlan/123456789",
+    "productPageText": "Pre-order now for delivery in 2 weeks",
+    "buyButtonText": "Pre-order Now"
+  }
+{% endcomment %}
+
+<!-- Standard product form with Prebuy integration -->
+<form action="{{ routes.cart_add_url }}" method="post" enctype="multipart/form-data">
+  
+  <!-- Variant selection (your existing code) -->
+  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+  
+  <!-- REQUIRED: Prebuy selling plan integration -->
+  {% render 'prebuy-selling-plan', product: product %}
+  
+  <!-- Example 1: Simple button (text changes automatically) -->
+  <button type="submit" class="btn btn-primary">
+    Add to Cart
+  </button>
+  
+  <!-- Example 2: Button with nested span (works automatically) -->
+  <button type="submit" class="btn btn-primary">
+    <span class="btn-text">Add to Cart</span>
+    <span class="btn-icon">→</span>
+  </button>
+  
+  <!-- Example 3: Input submit button (works automatically) -->
+  <input type="submit" value="Add to Cart" class="btn btn-primary">
+  
+  <!-- Example 4: Complex button structure (works automatically) -->
+  <div class="product-form__buttons">
+    <button type="submit" name="add" class="btn product-form__cart-submit">
+      <span class="btn-content">
+        {%- if product.selected_or_first_available_variant.available -%}
+          {{ 'products.product.add_to_cart' | t }}
+        {%- else -%}
+          {{ 'products.product.sold_out' | t }}
+        {%- endif -%}
+      </span>
+    </button>
+  </div>
+  
+</form>
+
+<!-- Optional: Display product page text for preorder variants -->
+{% render 'prebuy-selling-plan', product: product, show_text: true %}
+
+<!-- 
+  Debugging:
+  - Check browser console for 🔄 messages when changing variants
+  - Look for buyButtonText field in the debug output
+  - Inspect button elements for data-original-text and data-prebuy-button-active attributes
+  - The .prebuy-selling-plan input will have data-buy-button-text attribute
+-->
+
+<style>
+/* Optional: Style preorder buttons differently */
+button[data-prebuy-button-active="true"] {
+  background-color: #ff6b35;
+  border-color: #ff6b35;
+}
+
+button[data-prebuy-button-active="true"]:hover {
+  background-color: #e55a2b;
+  border-color: #e55a2b;
+}
+
+/* Style for product page text */
+.prebuy-product-text {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-left: 4px solid #ff6b35;
+  border-radius: 4px;
+}
+
+.prebuy-text {
+  margin: 0;
+  font-weight: 500;
+  color: #333;
+}
+</style>

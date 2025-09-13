@@ -3,6 +3,11 @@
   
   This shows the typical integration pattern for product forms.
   Add the prebuy-selling-plan render call after your variant ID input.
+  
+  Features demonstrated:
+  - Automatic buy button text changes for preorder variants
+  - Product page text display
+  - Seamless integration with existing theme code
 {% endcomment %}
 
 <!-- Your existing product form structure -->
@@ -42,6 +47,11 @@
   </div>
   
   <!-- Your existing buy button -->
+  <!-- 
+    PREBUY FEATURE: This button text will automatically change to custom text 
+    when the variant is in preorder mode (if buyButtonText is configured in campaigns)
+    Original text is preserved and restored when switching to non-preorder variants
+  -->
   <div class="product-form__buttons">
     <button
       type="submit"

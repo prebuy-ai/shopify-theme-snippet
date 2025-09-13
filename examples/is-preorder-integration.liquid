@@ -1,0 +1,83 @@
+{% comment %}
+  Example: How to use the integrated preorder detection in prebuy-selling-plan
+  
+  This demonstrates various ways to use the simple is_preorder variable
+  for conditional rendering and styling using the main prebuy-selling-plan snippet.
+{% endcomment %}
+
+<!-- Example 1: Simple preorder detection -->
+{% capture is_preorder %}{% render 'prebuy-selling-plan', product: product, return_preorder_status: true %}{% endcapture %}
+
+{% if is_preorder == 'true' %}
+  <span class="preorder-badge">This is a preorder!</span>
+{% else %}
+  <span class="regular-badge">Regular product</span>
+{% endif %}
+
+<!-- Example 2: Conditional buy button text -->
+{% capture is_preorder %}{% render 'prebuy-selling-plan', product: product, return_preorder_status: true %}{% endcapture %}
+
+<button type="submit" class="buy-button">
+  {% if is_preorder == 'true' %}
+    Preorder Now
+  {% else %}
+    Add to Cart
+  {% endif %}
+</button>
+
+<!-- Example 3: Check specific variant (useful in variant loops) -->
+{% for variant in product.variants %}
+  {% capture is_preorder %}{% render 'prebuy-selling-plan', product: product, variant: variant, return_preorder_status: true %}{% endcapture %}
+  
+  <div class="variant-option {% if is_preorder == 'true' %}variant--preorder{% endif %}">
+    <span class="variant-title">{{ variant.title }}</span>
+    {% if is_preorder == 'true' %}
+      <span class="preorder-label">Preorder</span>
+    {% endif %}
+  </div>
+{% endfor %}
+
+<!-- Example 4: Conditional styling classes -->
+{% capture is_preorder %}{% render 'prebuy-selling-plan', product: product, return_preorder_status: true %}{% endcapture %}
+
+<div class="product-info {% if is_preorder == 'true' %}product-info--preorder{% endif %}">
+  <h3>{{ product.title }}</h3>
+  {% if is_preorder == 'true' %}
+    <p class="preorder-notice">Available for preorder</p>
+  {% endif %}
+</div>
+
+<!-- Example 5: Use with your existing prebuy integration -->
+{% capture is_preorder %}{% render 'prebuy-selling-plan', product: product, return_preorder_status: true %}{% endcapture %}
+{% render 'prebuy-selling-plan', product: product %}
+
+<form action="/cart/add" method="post">
+  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+  
+  <button type="submit" class="btn {% if is_preorder == 'true' %}btn--preorder{% else %}btn--regular{% endif %}">
+    {% if is_preorder == 'true' %}
+      {{ 'products.product.preorder' | t | default: 'Preorder Now' }}
+    {% else %}
+      {{ 'products.product.add_to_cart' | t }}
+    {% endif %}
+  </button>
+</form>
+
+<!-- Also show the prebuy text if available -->
+{% render 'prebuy-selling-plan', product: product, show_text: true %}
+
+<!-- Example 6: Debug information (remove in production) -->
+{% capture is_preorder %}{% render 'prebuy-selling-plan', product: product, return_preorder_status: true %}{% endcapture %}
+
+{% comment %} 
+  Debug: Show preorder status
+  Remove this in production - just for testing
+{% endcomment %}
+<div style="background: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace;">
+  <strong>Debug Info:</strong><br>
+  Product: {{ product.title }}<br>
+  Variant: {{ product.selected_or_first_available_variant.title }}<br>
+  Is Preorder: {{ is_preorder }} (should be 'true' or 'false')<br>
+  Market ID: {{ localization.market.id }}<br>
+  Campaigns: {{ product.selected_or_first_available_variant.metafields.prebuy.campaigns.value.size | default: 0 }}
+</div>

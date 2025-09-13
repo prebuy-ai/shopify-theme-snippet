@@ -1,0 +1,43 @@
+{% comment %}
+  Minimal Example: Adding Preorder Button Text
+  
+  This shows the minimal change needed to add preorder button text functionality.
+  
+  Just add this ONE LINE anywhere in your product form or template:
+  {% render 'prebuy-selling-plan', product: product, show_button_text: true %}
+  
+  That's it! One line of code.
+  
+  What this enables:
+  - Page load: Shows "Preorder Now" for preorder variants, "Add to Cart" for regular variants
+  - Variant changes: Button text updates dynamically when switching between variants
+  - Sold out handling: Respects theme's sold out/unavailable states
+  - All existing prebuy functionality continues to work unchanged
+  
+  If you don't add this parameter:
+  - All existing prebuy functionality works normally (selling plans, hidden fields, etc.)
+  - Button always shows standard theme text ("Add to Cart", "Sold Out", etc.)
+  - No JavaScript button text updates run
+  - Zero performance impact
+{% endcomment %}
+
+<!-- Example 1: Standard theme behavior (no preorder button text) -->
+<h3>Standard Product Form</h3>
+<form action="/cart/add" method="post">
+  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+  {% render 'prebuy-selling-plan', product: product %}
+  
+  <button type="submit">Add to Cart</button>
+</form>
+
+<!-- Example 2: With preorder button text enabled -->
+<h3>Product Form with Preorder Button Text</h3>
+<form action="/cart/add" method="post">
+  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+  {% render 'prebuy-selling-plan', product: product %}
+  {% render 'prebuy-selling-plan', product: product, show_button_text: true %}
+  
+  <button type="submit">Add to Cart</button>
+</form>
+
+<!-- That's the only difference! One extra line. -->

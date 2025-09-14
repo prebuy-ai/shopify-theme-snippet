@@ -101,7 +101,7 @@
     
     <input
       type="hidden"
-      name="properties[_Location ID]"
+      name="properties[_locationId]"
       value="{{ selected_campaign.locationId }}"
       class="prebuy-location-property"
       {% unless is_market_compatible and selected_campaign.locationId %}disabled{% endunless %}
@@ -129,6 +129,7 @@
           {%- assign variant_selling_plan_id = '' -%}
           {%- assign variant_product_page_text = '' -%}
           {%- assign variant_location_id = '' -%}
+          {%- assign variant_zoned_est_dispatch_date = '' -%}
           
           {%- if variant_campaigns and variant_campaigns.size > 0 and current_market_config -%}
             {%- assign variant_best_priority = 999999 -%}
@@ -143,6 +144,7 @@
                     {%- assign variant_selling_plan_id = campaign.sellingPlanId | split: '/' | last -%}
                     {%- assign variant_product_page_text = campaign.productPageText -%}
                     {%- assign variant_location_id = campaign.locationId -%}
+                    {%- assign variant_zoned_est_dispatch_date = campaign.zonedEstDispatchDate -%}
                     {%- assign variant_best_priority = location_priority.priority -%}
                     {%- break -%}
                   {%- endif -%}
@@ -155,11 +157,15 @@
           {%- if variant_enabled -%}
           "sellingPlanId": {{ variant_selling_plan_id | json }},
           "productPageText": {{ variant_product_page_text | json }},
-          "locationId": {{ variant_location_id | json }}
+          "locationId": {{ variant_location_id | json }},
+          "selectedCampaign": {
+            "zonedEstDispatchDate": {{ variant_zoned_est_dispatch_date | json }}
+          }
           {%- else -%}
           "sellingPlanId": "",
           "productPageText": "",
-          "locationId": ""
+          "locationId": "",
+          "selectedCampaign": null
           {%- endif -%}
         }{% unless forloop.last %},{% endunless %}
       {%- endfor -%}

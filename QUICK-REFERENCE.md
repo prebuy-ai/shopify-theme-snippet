@@ -68,7 +68,7 @@
 **Form Elements Added:**
 ```html
 <input type="hidden" name="selling_plan" value="123456789" class="prebuy-selling-plan" data-buy-button-text="Pre-order Now">
-<input type="hidden" name="properties[_Location ID]" value="location123" class="prebuy-location-property">
+<input type="hidden" name="properties[_locationId]" value="location123" class="prebuy-location-property">
 ```
 
 **Button Attributes Added:**

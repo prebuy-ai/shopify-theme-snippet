@@ -20,6 +20,7 @@
   - 40% smaller code size while maintaining all functionality
   - Eliminated duplicated campaign matching logic
   - Conditional feature loading (button text, accelerated checkout)
+  - Complete skip of button text handling when show_button_text: false
   - Cached DOM elements to reduce queries
   - Streamlined Liquid logic
   - Fixed initial page load button text updates
@@ -344,7 +345,7 @@
           }
         });
         
-        // Conditional feature updates
+        // Conditional feature updates - only run if features are enabled
         if (this.features.buttonText) {
           this.updateButtonText(finalEnabled);
         }
@@ -354,6 +355,7 @@
         }
       }
       
+      {%- if show_button_text -%}
       updateButtonText(isPreorder) {
         console.log('Prebuy: Updating button text, isPreorder:', isPreorder, 'buttons:', this.cachedElements.buyButtons.length);
         this.cachedElements.buyButtons.forEach(button => {
@@ -389,6 +391,11 @@
           }
         });
       }
+      {%- else -%}
+      updateButtonText(isPreorder) {
+        // Button text feature is disabled - do nothing
+      }
+      {%- endif -%}
       
       updateAcceleratedCheckout(isPreorder) {
         this.cachedElements.acceleratedButtons.forEach(button => {

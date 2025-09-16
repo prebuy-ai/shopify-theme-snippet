@@ -24,7 +24,7 @@
   - Cached DOM elements to reduce queries
   - Streamlined Liquid logic
   - Fixed initial page load button text updates
-  - Added debug logging for troubleshooting
+  - Production-ready with minimal console output
   - Added inventory validation to ensure preorders only show when variant has stock
   
   Markets Support:
@@ -231,7 +231,7 @@
           this.runInitialUpdate();
           
         } catch (error) {
-          console.warn('Prebuy: Failed to parse variant data');
+          // Silently fail if variant data parsing fails
         }
       }
       
@@ -243,7 +243,6 @@
         // Only cache button elements if features are enabled
         if (this.features.buttonText) {
           this.cachedElements.buyButtons = document.querySelectorAll('.product-form__submit, button[name="add"], .pdp-info__add-to-cart');
-          console.log('Prebuy: Found', this.cachedElements.buyButtons.length, 'buy buttons for text updates');
         }
         
         if (this.features.hideAccelerated) {
@@ -280,16 +279,13 @@
       runInitialUpdate() {
         // Get the current variant ID from the variant input
         const variantInput = document.querySelector('input[name="id"]');
-        console.log('Prebuy: Running initial update, variant input:', variantInput, 'value:', variantInput?.value);
         if (variantInput && variantInput.value) {
-          console.log('Prebuy: Updating variant on page load:', variantInput.value);
           this.updateVariant(variantInput.value);
         }
         
         // Also run a small delay to ensure DOM is fully ready
         setTimeout(() => {
           if (variantInput && variantInput.value) {
-            console.log('Prebuy: Delayed update for variant:', variantInput.value);
             this.updateVariant(variantInput.value);
           }
         }, 100);
@@ -305,10 +301,6 @@
         // Final enabled status requires both metafield AND positive inventory
         const finalEnabled = variantData.enabled && hasVariantStock && variantInventory > 0;
         
-        // Debug logging for inventory validation
-        if (variantData.enabled && (!hasVariantStock || variantInventory <= 0)) {
-          console.log('Prebuy: Disabling preorder for variant', variantId, 'due to insufficient inventory:', variantInventory);
-        }
         
         // Update selling plan inputs
         this.cachedElements.sellingPlanInputs.forEach(input => {
@@ -357,11 +349,9 @@
       
       {%- if show_button_text -%}
       updateButtonText(isPreorder) {
-        console.log('Prebuy: Updating button text, isPreorder:', isPreorder, 'buttons:', this.cachedElements.buyButtons.length);
         this.cachedElements.buyButtons.forEach(button => {
           const buttonTextSpan = button.querySelector('span');
           if (!buttonTextSpan || button.disabled) {
-            console.log('Prebuy: Skipping button - no span or disabled:', button);
             return;
           }
           
@@ -384,10 +374,7 @@
           // Only update text for available buttons
           if (!isSoldOutOrUnavailable) {
             const newText = isPreorder ? 'Preorder Now' : button.dataset.originalText;
-            console.log('Prebuy: Setting button text to:', newText, 'for button:', button);
             buttonTextSpan.textContent = newText;
-          } else {
-            console.log('Prebuy: Skipping button text update - button is sold out/unavailable');
           }
         });
       }

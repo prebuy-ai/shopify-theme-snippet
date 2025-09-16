@@ -24,6 +24,7 @@
   - Streamlined Liquid logic
   - Fixed initial page load button text updates
   - Added debug logging for troubleshooting
+  - Added inventory validation to ensure preorders only show when variant has stock
   
   Markets Support:
   - Variant metafield supports array of campaigns: [{ locationId: "location_id", sellingPlanId: "...", productPageText: "..." }]
@@ -31,6 +32,12 @@
   - Matches campaigns by finding locationId in current market's locationPriorities array
   - When multiple campaigns match, selects the one with lowest priority number (1 = highest priority)
   - Market IDs should be numeric format (e.g., "93117382984")
+  
+  Inventory Validation:
+  - Preorders are only enabled when variant has positive inventory (> 0)
+  - If variant has no inventory, preorder functionality is disabled even if metafield is present
+  - Provides validation to ensure preorders only show when stock is available
+  - Includes debug logging when preorders are disabled due to insufficient inventory
 {% endcomment %}
 
 {%- liquid
@@ -60,7 +67,14 @@
   assign selling_plan_id = ''
   assign product_page_text = ''
   
-  if prebuy_campaigns and prebuy_campaigns.size > 0 and current_market_config
+  # Get variant inventory for validation - only show preorders if variant has positive inventory
+  assign variant_inventory = current_variant.inventory_quantity | default: 0
+  assign has_variant_stock = false
+  if variant_inventory > 0
+    assign has_variant_stock = true
+  endif
+  
+  if prebuy_campaigns and prebuy_campaigns.size > 0 and current_market_config and has_variant_stock
     assign best_priority = 999999
     for campaign in prebuy_campaigns
       if campaign.locationId and current_market_config.locationPriorities
@@ -131,7 +145,13 @@
           {%- assign variant_location_id = '' -%}
           {%- assign variant_zoned_est_dispatch_date = '' -%}
           
-          {%- if variant_campaigns and variant_campaigns.size > 0 and current_market_config -%}
+          {%- assign variant_inventory = variant.inventory_quantity | default: 0 -%}
+          {%- assign variant_has_stock = false -%}
+          {%- if variant_inventory > 0 -%}
+            {%- assign variant_has_stock = true -%}
+          {%- endif -%}
+          
+          {%- if variant_campaigns and variant_campaigns.size > 0 and current_market_config and variant_has_stock -%}
             {%- assign variant_best_priority = 999999 -%}
             {%- for campaign in variant_campaigns -%}
               {%- if campaign.locationId and current_market_config.locationPriorities -%}
@@ -154,6 +174,8 @@
           {%- endif -%}
           
           "enabled": {{ variant_enabled | json }},
+          "variantInventory": {{ variant_inventory | json }},
+          "hasVariantStock": {{ variant_has_stock | json }},
           {%- if variant_enabled -%}
           "sellingPlanId": {{ variant_selling_plan_id | json }},
           "productPageText": {{ variant_product_page_text | json }},
@@ -275,9 +297,21 @@
       updateVariant(variantId) {
         const variantData = this.variantData[variantId] || { enabled: false };
         
+        // Additional inventory validation - only enable preorders if variant has stock
+        const hasVariantStock = variantData.hasVariantStock || false;
+        const variantInventory = variantData.variantInventory || 0;
+        
+        // Final enabled status requires both metafield AND positive inventory
+        const finalEnabled = variantData.enabled && hasVariantStock && variantInventory > 0;
+        
+        // Debug logging for inventory validation
+        if (variantData.enabled && (!hasVariantStock || variantInventory <= 0)) {
+          console.log('Prebuy: Disabling preorder for variant', variantId, 'due to insufficient inventory:', variantInventory);
+        }
+        
         // Update selling plan inputs
         this.cachedElements.sellingPlanInputs.forEach(input => {
-          if (variantData.enabled) {
+          if (finalEnabled) {
             input.value = variantData.sellingPlanId;
             input.removeAttribute('disabled');
             input.setAttribute('data-prebuy-enabled', 'true');
@@ -290,7 +324,7 @@
         
         // Update location property inputs
         this.cachedElements.locationInputs.forEach(input => {
-          if (variantData.enabled && variantData.locationId) {
+          if (finalEnabled && variantData.locationId) {
             input.value = variantData.locationId;
             input.removeAttribute('disabled');
           } else {
@@ -302,7 +336,7 @@
         // Update product page text
         this.cachedElements.productText.forEach(element => {
           const textElement = element.querySelector('.prebuy-text');
-          if (variantData.enabled && variantData.productPageText) {
+          if (finalEnabled && variantData.productPageText) {
             textElement.textContent = variantData.productPageText;
             element.style.display = 'block';
           } else {
@@ -312,11 +346,11 @@
         
         // Conditional feature updates
         if (this.features.buttonText) {
-          this.updateButtonText(variantData.enabled);
+          this.updateButtonText(finalEnabled);
         }
         
         if (this.features.hideAccelerated) {
-          this.updateAcceleratedCheckout(variantData.enabled);
+          this.updateAcceleratedCheckout(finalEnabled);
         }
       }
       

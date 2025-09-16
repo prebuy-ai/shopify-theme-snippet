@@ -166,12 +166,19 @@ Add this single line anywhere in your product template:
 - **Theme Compatibility**: Works with any button structure without theme modifications
 - **Sold Out Handling**: Respects theme's sold out/unavailable button states
 - **Universal Detection**: Automatically finds and updates all buy buttons on the page
+- **Performance Optimized**: When `show_button_text: false`, completely skips all button text processing for maximum efficiency
 
 ### Technical Details
 - Targets common button selectors: `.product-form__submit`, `button[name="add"]`
 - Preserves original button text for non-preorder variants
 - Only updates enabled/available buttons (respects disabled state)
 - Runs after theme's JavaScript to avoid conflicts
+
+### Performance Optimization
+- **Conditional Loading**: When `show_button_text: false`, the entire button text handling code is excluded from the JavaScript
+- **Zero Overhead**: No DOM queries, no text processing, no button caching when feature is disabled
+- **Minimal Footprint**: Reduces JavaScript payload size when button text changes aren't needed
+- **Smart Caching**: Only caches button elements when the feature is actively used
 
 ## 💳 Accelerated Checkout Control
 

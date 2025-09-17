@@ -121,6 +121,14 @@
       class="prebuy-location-property"
       {% unless is_market_compatible and selected_campaign.locationId %}disabled{% endunless %}
     >
+    
+    <input
+      type="hidden"
+      name="properties[_shipping]"
+      value="{{ selected_campaign.estDispatchDate }}"
+      class="prebuy-shipping-property"
+      {% unless is_market_compatible and selected_campaign.estDispatchDate %}disabled{% endunless %}
+    >
   {%- endunless -%}
 
   {%- if show_text -%}
@@ -145,6 +153,7 @@
           {%- assign variant_product_page_text = '' -%}
           {%- assign variant_location_id = '' -%}
           {%- assign variant_zoned_est_dispatch_date = '' -%}
+          {%- assign variant_est_dispatch_date = '' -%}
           
           {%- assign variant_inventory = variant.inventory_quantity | default: 0 -%}
           {%- assign variant_has_stock = false -%}
@@ -166,6 +175,7 @@
                     {%- assign variant_product_page_text = campaign.productPageText -%}
                     {%- assign variant_location_id = campaign.locationId -%}
                     {%- assign variant_zoned_est_dispatch_date = campaign.zonedEstDispatchDate -%}
+                    {%- assign variant_est_dispatch_date = campaign.estDispatchDate -%}
                     {%- assign variant_best_priority = location_priority.priority -%}
                     {%- break -%}
                   {%- endif -%}
@@ -182,7 +192,8 @@
           "productPageText": {{ variant_product_page_text | json }},
           "locationId": {{ variant_location_id | json }},
           "selectedCampaign": {
-            "zonedEstDispatchDate": {{ variant_zoned_est_dispatch_date | json }}
+            "zonedEstDispatchDate": {{ variant_zoned_est_dispatch_date | json }},
+            "estDispatchDate": {{ variant_est_dispatch_date | json }}
           }
           {%- else -%}
           "sellingPlanId": "",
@@ -238,6 +249,7 @@
       cacheElements() {
         this.cachedElements.sellingPlanInputs = document.querySelectorAll('.prebuy-selling-plan');
         this.cachedElements.locationInputs = document.querySelectorAll('.prebuy-location-property');
+        this.cachedElements.shippingInputs = document.querySelectorAll('.prebuy-shipping-property');
         this.cachedElements.productText = document.querySelectorAll('.prebuy-product-text');
         
         // Only cache button elements if features are enabled
@@ -319,6 +331,17 @@
         this.cachedElements.locationInputs.forEach(input => {
           if (finalEnabled && variantData.locationId) {
             input.value = variantData.locationId;
+            input.removeAttribute('disabled');
+          } else {
+            input.value = '';
+            input.setAttribute('disabled', 'disabled');
+          }
+        });
+        
+        // Update shipping property inputs
+        this.cachedElements.shippingInputs.forEach(input => {
+          if (finalEnabled && variantData.selectedCampaign && variantData.selectedCampaign.estDispatchDate) {
+            input.value = variantData.selectedCampaign.estDispatchDate;
             input.removeAttribute('disabled');
           } else {
             input.value = '';

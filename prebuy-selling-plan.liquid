@@ -42,6 +42,9 @@
 {% endcomment %}
 
 {%- liquid
+  # Debug: Log render parameters
+  echo '<!-- Prebuy render params: show_button_text=' | append: show_button_text | append: ', show_text=' | append: show_text | append: ', hide_accelerated_checkout=' | append: hide_accelerated_checkout | append: ' -->'
+  
   # Initialize variables
   assign current_variant = variant | default: product.selected_or_first_available_variant
   assign prebuy_campaigns = current_variant.metafields.prebuy.campaigns.value
@@ -129,6 +132,14 @@
       class="prebuy-shipping-property"
       {% unless is_market_compatible and selected_campaign.estDispatchDate %}disabled{% endunless %}
     >
+    
+    <input
+      type="hidden"
+      name="properties[PreOrder-Note]"
+      value="Ships {{ selected_campaign.estDispatchDate | date: '%B %d, %Y' }}"
+      class="prebuy-preorder-note"
+      {% unless is_market_compatible and selected_campaign.estDispatchDate %}disabled{% endunless %}
+    >
   {%- endunless -%}
 
   {%- if show_text -%}
@@ -212,7 +223,9 @@
     'use strict';
     
     // Prevent duplicate initialization
-    if (window.prebuyOptimizedInitialized) return;
+    if (window.prebuyOptimizedInitialized) {
+      return;
+    }
     window.prebuyOptimizedInitialized = true;
     
     class PrebuyOptimized {
@@ -229,7 +242,10 @@
       
       init() {
         const dataElement = document.querySelector('.prebuy-variant-data');
-        if (!dataElement) return;
+        if (!dataElement) {
+          return;
+        }
+        // Initialize preorder button text logic
         
         try {
           const data = JSON.parse(dataElement.textContent);
@@ -237,9 +253,8 @@
           this.marketConfig = data.marketConfig;
           this.currentMarketId = data.currentMarketId;
           
-          this.cacheElements();
-          this.setupListeners();
-          this.runInitialUpdate();
+          // Initialize simple preorder button manager
+          new SimplePreorderButtons(this.variantData);
           
         } catch (error) {
           // Silently fail if variant data parsing fails
@@ -254,7 +269,7 @@
         
         // Only cache button elements if features are enabled
         if (this.features.buttonText) {
-          this.cachedElements.buyButtons = document.querySelectorAll('.product-form__submit, button[name="add"], .pdp-info__add-to-cart');
+          this.cachedElements.buyButtons = document.querySelectorAll('.ProductForm__AddToCart, button[name="add"], .pdp-info__add-to-cart');
         }
         
         if (this.features.hideAccelerated) {
@@ -291,13 +306,17 @@
       runInitialUpdate() {
         // Get the current variant ID from the variant input
         const variantInput = document.querySelector('input[name="id"]');
+        console.log('🔍 Running initial update, variant input:', variantInput);
         if (variantInput && variantInput.value) {
+          console.log('🔍 Initial variant ID:', variantInput.value);
           this.updateVariant(variantInput.value);
         }
         
         // Also run a small delay to ensure DOM is fully ready
         setTimeout(() => {
+          console.log('🔍 Running delayed update...');
           if (variantInput && variantInput.value) {
+            console.log('🔍 Delayed variant ID:', variantInput.value);
             this.updateVariant(variantInput.value);
           }
         }, 100);
@@ -372,9 +391,15 @@
       
       {%- if show_button_text -%}
       updateButtonText(isPreorder) {
+        console.log('🔍 Prebuy updateButtonText called with isPreorder:', isPreorder);
+        console.log('🔍 Found buttons:', this.cachedElements.buyButtons.length);
+        
         this.cachedElements.buyButtons.forEach(button => {
+          console.log('🔍 Processing button:', button);
           const buttonTextSpan = button.querySelector('span');
+          console.log('🔍 Found span:', buttonTextSpan);
           if (!buttonTextSpan || button.disabled) {
+            console.log('🔍 Skipping button - no span or disabled');
             return;
           }
           
@@ -397,6 +422,7 @@
           // Only update text for available buttons
           if (!isSoldOutOrUnavailable) {
             const newText = isPreorder ? 'Preorder Now' : button.dataset.originalText;
+            console.log('🔍 Updating button text from:', buttonTextSpan.textContent, 'to:', newText);
             buttonTextSpan.textContent = newText;
           }
         });
@@ -415,6 +441,114 @@
           } else if (button.getAttribute('data-prebuy-hidden') === 'true') {
             button.style.display = '';
             button.removeAttribute('data-prebuy-hidden');
+          }
+        });
+      }
+    }
+    
+    // Simple preorder button text manager
+    class SimplePreorderButtons {
+      constructor(variantData) {
+        this.variantData = variantData;
+        this.setupVariantListener();
+        this.updateCurrentVariant();
+      }
+      
+      updateCurrentVariant() {
+        // Try different selectors for variant input
+        let variantInput = document.querySelector('input[name="id"]');
+        if (!variantInput) {
+          variantInput = document.querySelector('.product-variant-id');
+        }
+        if (!variantInput) {
+          variantInput = document.querySelector('input[type="hidden"][name="id"]');
+        }
+        
+        // If no input found, use the first available variant from data
+        if (!variantInput || !variantInput.value) {
+          const availableVariants = Object.keys(this.variantData);
+          if (availableVariants.length > 0) {
+            this.updateButtonForVariant(availableVariants[0]);
+            return;
+          }
+        }
+        
+        if (variantInput && variantInput.value) {
+          this.updateButtonForVariant(variantInput.value);
+        }
+      }
+      
+      updateButtonForVariant(variantId) {
+        const variantData = this.variantData[variantId];
+        const isPreorder = variantData && variantData.enabled;
+        
+        // Update button text
+        const button = document.querySelector('.ProductForm__AddToCart');
+        if (button) {
+          const span = button.querySelector('span');
+          if (span) {
+            // Store original text if not already stored
+            if (!button.dataset.originalText) {
+              button.dataset.originalText = span.textContent.trim();
+            }
+            
+            // Determine the correct text based on button state and preorder status
+            let newText;
+            if (button.disabled) {
+              newText = 'Sold Out';
+            } else {
+              newText = isPreorder ? 'Preorder Now' : button.dataset.originalText;
+            }
+            
+            span.textContent = newText;
+          }
+        }
+        
+        // Update shipping date text
+        const shippingContainer = document.querySelector('.prebuy-product-text');
+        if (shippingContainer) {
+          const textElement = shippingContainer.querySelector('.prebuy-text');
+          if (isPreorder && variantData.productPageText) {
+            textElement.textContent = variantData.productPageText;
+            shippingContainer.style.display = 'block';
+          } else {
+            shippingContainer.style.display = 'none';
+          }
+        }
+        
+        // Update PreOrder-Note property for cart
+        const preorderNoteInput = document.querySelector('.prebuy-preorder-note');
+        if (preorderNoteInput && variantData && variantData.selectedCampaign) {
+          if (isPreorder && variantData.selectedCampaign.estDispatchDate) {
+            // Format the date nicely for the cart note
+            const shipDate = new Date(variantData.selectedCampaign.estDispatchDate);
+            const formattedDate = shipDate.toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            });
+            preorderNoteInput.value = `Ships ${formattedDate}`;
+            preorderNoteInput.removeAttribute('disabled');
+          } else {
+            preorderNoteInput.value = '';
+            preorderNoteInput.setAttribute('disabled', 'disabled');
+          }
+        }
+      }
+      
+      setupVariantListener() {
+        // Listen for variant changes
+        document.addEventListener('change', (event) => {
+          if (event.target.name === 'id' || event.target.classList.contains('product-variant-id')) {
+            this.updateButtonForVariant(event.target.value);
+          }
+        });
+        
+        // Listen for theme's custom variant change event
+        document.addEventListener('variant:changed', (event) => {
+          if (event.detail && event.detail.variant) {
+            // No delay needed since theme script is bypassed
+            this.updateButtonForVariant(event.detail.variant.id);
           }
         });
       }

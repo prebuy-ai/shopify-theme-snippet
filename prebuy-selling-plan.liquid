@@ -132,14 +132,6 @@
       class="prebuy-shipping-property"
       {% unless is_market_compatible and selected_campaign.estDispatchDate %}disabled{% endunless %}
     >
-    
-    <input
-      type="hidden"
-      name="properties[PreOrder-Note]"
-      value="Ships {{ selected_campaign.estDispatchDate | date: '%B %d, %Y' }}"
-      class="prebuy-preorder-note"
-      {% unless is_market_compatible and selected_campaign.estDispatchDate %}disabled{% endunless %}
-    >
   {%- endunless -%}
 
   {%- if show_text -%}
@@ -513,25 +505,6 @@
             shippingContainer.style.display = 'block';
           } else {
             shippingContainer.style.display = 'none';
-          }
-        }
-        
-        // Update PreOrder-Note property for cart
-        const preorderNoteInput = document.querySelector('.prebuy-preorder-note');
-        if (preorderNoteInput && variantData && variantData.selectedCampaign) {
-          if (isPreorder && variantData.selectedCampaign.estDispatchDate) {
-            // Format the date nicely for the cart note
-            const shipDate = new Date(variantData.selectedCampaign.estDispatchDate);
-            const formattedDate = shipDate.toLocaleDateString('en-US', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            });
-            preorderNoteInput.value = `Ships ${formattedDate}`;
-            preorderNoteInput.removeAttribute('disabled');
-          } else {
-            preorderNoteInput.value = '';
-            preorderNoteInput.setAttribute('disabled', 'disabled');
           }
         }
       }
